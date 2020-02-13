@@ -1,1 +1,0 @@
-/home/stella/rust/project/target/debug/map_test-3460cbd9fe15341b: /home/stella/rust/project/src/controller.rs /home/stella/rust/project/src/game.rs /home/stella/rust/project/src/lib.rs /home/stella/rust/project/src/main.rs /home/stella/rust/project/src/map.rs /home/stella/rust/project/src/player.rs /home/stella/rust/project/tests/map_test.rs
