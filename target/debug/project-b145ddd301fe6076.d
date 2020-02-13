@@ -1,0 +1,1 @@
+/home/stella/rust/project/target/debug/project-b145ddd301fe6076: /home/stella/rust/project/src/controllers.rs /home/stella/rust/project/src/game.rs /home/stella/rust/project/src/lib.rs /home/stella/rust/project/src/main.rs /home/stella/rust/project/src/map.rs /home/stella/rust/project/src/player.rs /home/stella/rust/project/src/utills.rs

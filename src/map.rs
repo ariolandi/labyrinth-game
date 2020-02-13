@@ -4,7 +4,7 @@ use crate::project_errors::GameError;
 use crate::player::*;
 
 pub struct Map {
-    size: usize,
+    pub size: usize,
     map: Matrix<i8>
 }
 
@@ -25,8 +25,12 @@ impl Map{
 }
 
 impl Map{
-    fn get(&self, x: usize, y: usize) -> i8{
+    fn get(&self, x: usize, y: usize) -> i8 {
         return *self.map.get(x, y).unwrap();
+    }
+
+    pub fn get_field(&self, coordinates: Position) -> i8 {
+        return self.get(coordinates.0, coordinates.1);
     }
 
     pub fn empty(&self, x: usize, y:usize) -> bool {
@@ -35,6 +39,15 @@ impl Map{
 }
 
 impl  Map {
+    pub fn spawn_portal(&mut self, position: Position) -> Result<(), GameError> {
+        if self.empty(position.0, position.1) {
+            self.map.set(position.0, position.1, 2);
+            return Ok(());
+        } else {
+            return Err(GameError::InvalidCoordinates);
+        }
+    }
+
     pub fn spawn_player(&mut self, player: &mut Player, position: Position) -> Result<(), GameError> {
         if self.empty(position.0, position.1) {
             self.map.set(position.0, position.1, -1*player.player_code);
@@ -49,7 +62,13 @@ impl  Map {
         match change_coordinates(player.coordinates.unwrap(), direction) {
             Ok(Position(new_x, new_y)) => {
                 if !self.empty(new_x, new_y) {
-                    return Err(GameError::InvalidCoordinates);
+                    if self.get(new_x as usize, new_y as usize) == 2{
+                        return Err(GameError::Portal);
+                    } else if get_player(self.get(new_x as usize, new_y as usize)) > 0 {
+                        return Err(GameError::AnotherPlayer);
+                    } else {
+                        return Err(GameError::InvalidCoordinates);
+                    }
                 }
                 if new_x >= self.size || new_y >= self.size {
                     return Err(GameError::Outside);
@@ -65,6 +84,13 @@ impl  Map {
         }
     }
 
+    pub fn kill_player(&mut self, player: &mut Player) {
+        let x: usize = player.coordinates.unwrap().0;
+        let y: usize = player.coordinates.unwrap().1;
+        player.coordinates = None;
+        self.map.set(x, y, 0);
+    }
+
     pub fn display(&self) -> String {
         let mut result: String = String::new();
         for x in 0..self.size{
@@ -76,8 +102,6 @@ impl  Map {
         }
         return result;
     }
-
-
 }
 
 fn generate_map(size: usize) -> Matrix<i8> {
@@ -95,20 +119,29 @@ fn get_char(field: i8) -> Result<char, GameError> {
         return Ok('#');
     } else if field == 0 {
         return Ok('.');
+    } else if field == 2 {
+        return Ok('0');
     } else {
-        return match_player(-1*field as isize); 
+        return match_player(field as isize); 
     }
 }
 
 fn match_player(field: isize) -> Result<char, GameError> {
-    if field < 0 {
+    if field > 0 {
         return Err(GameError::InvalidField);
     }
-    let player_code: usize = field as usize;
+    let player_code: usize = (-1*field) as usize;
     if player_code < 1 || player_code > MAX_PLAYERS as usize {
         return Err(GameError::InvalidField);
     } else {
         return Ok(PLAYERCODES[player_code]);
+    }
+}
+
+pub fn get_player(field: i8) -> usize {
+    match match_player(field as isize) {
+        Ok(_) => return (-1*field) as usize,
+        Err(_) => return 0,
     }
 }
 
@@ -118,17 +151,17 @@ fn match_player(field: isize) -> Result<char, GameError> {
 
 #[test]
 fn test_match_player() {
-    assert_eq!(match_player(1), Ok('1'));
-    assert_eq!(match_player(2), Ok('2'));
-    assert_eq!(match_player(3), Ok('3'));
-    assert_eq!(match_player(4), Ok('4'));
+    assert_eq!(match_player(-1), Ok('1'));
+    assert_eq!(match_player(-2), Ok('2'));
+    assert_eq!(match_player(-3), Ok('3'));
+    assert_eq!(match_player(-4), Ok('4'));
 }
 
 #[test]
 fn test_match_bad_player() {
     assert_eq!(match_player(0), Err(GameError::InvalidField));
-    assert_eq!(match_player(5), Err(GameError::InvalidField));
-    assert_eq!(match_player(-1), Err(GameError::InvalidField));
+    assert_eq!(match_player(-5), Err(GameError::InvalidField));
+    assert_eq!(match_player(1), Err(GameError::InvalidField));
 }
 
 #[test]
@@ -140,4 +173,12 @@ fn test_get_char() {
     assert_eq!(get_char(-3), Ok('3'));
     assert_eq!(get_char(-4), Ok('4'));
     assert_eq!(get_char(-5), Err(GameError::InvalidField));
+}
+
+#[test]
+fn test_get_player() {
+    assert_eq!(get_player(0), 0);
+    assert_eq!(get_player(1), 0);
+    assert_eq!(get_player(-1), 1);
+    assert_eq!(get_player(-2), 2);
 }

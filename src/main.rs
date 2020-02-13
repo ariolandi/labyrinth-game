@@ -1,20 +1,14 @@
 use project::*;
-use map::Map;
-use player::Player;
-use Position;
-use std::error::Error;
+use game::Game;
+
 
 fn main() {
-    let mut test_map = Map::new(5);
-    let mut test_player = Player::with_code("test".to_string(), 1);
-    match test_map.spawn_player(&mut test_player, Position(0, 0)) {
-        Ok(_) => {
-            match test_map.move_player(&mut test_player, "up") {
-                Ok(_) => print!("{}", test_map.display()),
-                Err(e) => print!("{}", e.description()),
-            }
-        },
-        Err(_) => print!("fjfhs"),
-    }
+    let mut game = Game::init();
+    game.start();
+    while game.next_turn() {}
+    Game::end(game);
 
+    // let mut a = String::new();
+    // let n:usize = stdin().read_line(&mut a).unwrap();
+    // print!("{}", a.to_string());
 }

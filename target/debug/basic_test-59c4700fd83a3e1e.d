@@ -1,0 +1,1 @@
+/home/stella/rust/project/target/debug/basic_test-59c4700fd83a3e1e: /home/stella/rust/project/src/game.rs /home/stella/rust/project/src/lib.rs /home/stella/rust/project/src/main.rs /home/stella/rust/project/src/map.rs /home/stella/rust/project/src/player.rs /home/stella/rust/project/tests/basic_test.rs

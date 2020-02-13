@@ -1,1 +1,1 @@
-/home/stella/rust/project/target/debug/project-4f1f7f3fb2426eeb: /home/stella/rust/project/src/game.rs /home/stella/rust/project/src/lib.rs /home/stella/rust/project/src/map.rs /home/stella/rust/project/src/player.rs
+/home/stella/rust/project/target/debug/project-4f1f7f3fb2426eeb: /home/stella/rust/project/src/controller.rs /home/stella/rust/project/src/game.rs /home/stella/rust/project/src/lib.rs /home/stella/rust/project/src/map.rs /home/stella/rust/project/src/player.rs

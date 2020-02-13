@@ -1,6 +1,7 @@
 use crate::project_errors::GameError;
 use crate::Position;
 use crate::directions;
+use std::cmp::Ordering;
 
 pub struct Player{
     pub name: String,
@@ -29,21 +30,52 @@ impl Player{
     }
 }
 
+impl PartialOrd for Player {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        return self.score.partial_cmp(&other.score);
+    }
+}
+
+impl PartialEq for Player {
+    fn eq(&self, other: &Self) -> bool {
+        return self.score.eq(&other.score);
+    }
+}
+
+impl Ord for Player {
+    fn cmp(&self, other: &Self) -> Ordering {
+        return self.score.cmp(&other.score);
+    }
+}
+
+impl Eq for Player {}
+
 impl Player{
-    pub fn win_points(&mut self, points: u32){
+    pub fn win_points(&mut self, points: u32) {
         self.score = self.score + points;
     }
 
-    pub fn spawn(&mut self, coordinates: Position){
+    pub fn spawn(&mut self, coordinates: Position) {
         self.coordinates = Some(coordinates);
     }
 
-    pub fn set_move(&mut self, direction: &str){
+    pub fn set_move(&mut self, direction: &str) {
         self.coordinates = get_coordinates(self.coordinates, direction)
     }
 
-    pub fn display(&self) -> String{
+    pub fn display(&self) -> String {
         return self.name.to_string() + "\nscore: " + &self.score.to_string() + "\n";
+    }
+
+    pub fn is_alive(&self) -> bool {
+        return !(self.coordinates == None) ;
+    }
+
+    pub fn rank(players: Vec<Player>) -> Vec<Player> {
+        let mut ranklist = players;
+        ranklist.sort();
+        ranklist.reverse();
+        return ranklist;
     }
 }
 
@@ -78,7 +110,6 @@ pub fn change_coordinates(coordinates:Position, direction: &str) -> Result<Posit
         return Err(GameError::InvalidDirection);
     }
 }
-
 
 
 

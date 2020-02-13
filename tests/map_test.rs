@@ -26,6 +26,28 @@ fn test_map_display() {
 }
 
 #[test]
+fn test_map_get() {
+    let mut test_map = map();
+    assert_eq!(test_map.get_field(Position(0, 0)), 0);
+    assert_eq!(test_map.get_field(Position(0, 1)), 1);
+    let mut test_player = player();
+    match test_map.spawn_player(&mut test_player, Position(0, 0)) {
+        Ok(_) => assert_eq!(test_map.get_field(Position(0, 0)), -1),
+        Err(_) => panic!("Something wrong!"),
+    }
+}
+
+#[test]
+fn test_map_spawn_portal() {
+    let mut test_map = map();
+    let expected: String = "0 # # . \n. . # . \n# . . . \n# # . . \n".to_string();
+    match test_map.spawn_portal(Position(0, 0)) {
+        Ok(_) => assert_eq!(test_map.display(), expected),
+        Err(_) => panic!("Something wrong!"),
+    }
+}
+
+#[test]
 fn test_map_spawn_player() {
     let mut test_map = map();
     let mut test_player = player();
@@ -63,7 +85,7 @@ fn test_move_player() {
 }
 
 #[test]
-fn test_move_player_error_InvalidCoordinates() {
+fn test_move_player_error_invalid_coordinates() {
     let mut test_map = map();
     let mut test_player = player();
     match test_map.spawn_player(&mut test_player, Position(0, 0)) {
@@ -78,7 +100,24 @@ fn test_move_player_error_InvalidCoordinates() {
 }
 
 #[test]
-fn test_move_player_error_Outside() {
+fn test_move_player_error_another_player() {
+    let mut test_map = map();
+    let mut test_player1 = player();
+    let mut test_player2 = player();
+    match test_map.spawn_player(&mut test_player1, Position(0, 0)) {
+        Ok(_) => {
+            test_map.spawn_player(&mut test_player2, Position(1, 0)).ok().unwrap();
+            match test_map.move_player(&mut test_player1, directions::DOWN) {
+                Ok(_) => panic!("Something wrong!"),
+                Err(e) => assert_eq!(e, GameError::AnotherPlayer),
+            }
+        },
+        Err(_) => panic!("Something wrong!"),
+    }
+}
+
+#[test]
+fn test_move_player_error_outside() {
     let mut test_map = map();
     let mut test_player = player();
     match test_map.spawn_player(&mut test_player, Position(0, 0)) {
@@ -90,4 +129,15 @@ fn test_move_player_error_Outside() {
         },
         Err(_) => panic!("Something wrong!"),
     }
+}
+
+
+#[test]
+fn test_kill_player() {
+    let mut test_map = map();
+    let mut test_player = player();
+    test_map.spawn_player(&mut test_player, Position(0, 0)).ok().unwrap();
+    test_map.kill_player(&mut test_player);
+    let expected: String = ". # # . \n. . # . \n# . . . \n# # . . \n".to_string();
+    assert_eq!(map().display(), expected);
 }
