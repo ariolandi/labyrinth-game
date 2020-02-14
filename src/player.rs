@@ -3,10 +3,11 @@ use crate::Position;
 use crate::directions;
 use std::cmp::Ordering;
 
+#[derive(Clone)]
 pub struct Player{
     pub name: String,
     score: u32,
-    pub player_code: i8,
+    pub player_code: usize,
     pub coordinates: Option<Position>
 }
 
@@ -20,7 +21,7 @@ impl Player{
         }
     }
 
-    pub fn with_code(name: String, code: i8) -> Player {
+    pub fn with_code(name: String, code: usize) -> Player {
         Player{
             name: name,
             player_code: code,

@@ -1,17 +1,10 @@
 use project::{map::Map, player::Player};
 use project::project_errors::GameError;
 use project::{Position, directions};
-use simple_matrix::Matrix;
 
 fn map() -> Map {
-    let matrix_array = [[0, 1, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0], [1, 1, 0, 0 ]];
-    let mut matrix: Matrix<i8> = Matrix::new(4, 4);
-    for i in 0..4 {
-        for j in 0..4 {
-            matrix.set(i as usize, j as usize, matrix_array[i][j]);
-        }
-    }
-    return Map::from_matrix(4, matrix);
+    let matrix_array: &[&[i8]] = &[&[0, 1, 1, 0], &[0, 0, 1, 0], &[1, 0, 0, 0], &[1, 1, 0, 0 ]];
+    return Map::from_matrix(4, matrix_array);
 }
 
 fn player() -> Player {
@@ -28,11 +21,11 @@ fn test_map_display() {
 #[test]
 fn test_map_get() {
     let mut test_map = map();
-    assert_eq!(test_map.get_field(Position(0, 0)), 0);
-    assert_eq!(test_map.get_field(Position(0, 1)), 1);
+    assert_eq!(test_map.get_field(Position(0, 0)), '.');
+    assert_eq!(test_map.get_field(Position(0, 1)), '#');
     let mut test_player = player();
     match test_map.spawn_player(&mut test_player, Position(0, 0)) {
-        Ok(_) => assert_eq!(test_map.get_field(Position(0, 0)), -1),
+        Ok(_) => assert_eq!(test_map.get_field(Position(0, 0)), '1'),
         Err(_) => panic!("Something wrong!"),
     }
 }

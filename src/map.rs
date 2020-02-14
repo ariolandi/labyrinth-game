@@ -1,13 +1,20 @@
 use simple_matrix::Matrix;
-use crate::{Position, MAX_PLAYERS, PLAYERCODES};
+use crate::{Position, PLAYERCODES, FIELDS};
 use crate::project_errors::GameError;
 use crate::player::*;
 
+
+/// Map class - contains the labyrinth map
+/// If a field value is:
+///    '.' - it is empty and the players can move on it.
+///    '#' - this is a wall.
+///    '0' - this is a portal. Walking through it finishes the game.
 pub struct Map {
     pub size: usize,
-    map: Matrix<i8>
+    map: Matrix<char>
 }
 
+/// Constructors
 impl Map{
     pub fn new(size: usize) -> Map {
         Map{
@@ -16,41 +23,50 @@ impl Map{
         }
     }
 
-    pub fn from_matrix(size: usize, matrix: Matrix<i8>) -> Map {
+    pub fn from_matrix(size: usize, matrix: &[&[i8]]) -> Map {
         Map{
             size: size,
-            map: matrix,
+            map: from_array(matrix),
         }
     }
 }
 
+
+/// Class getters and setters
 impl Map{
-    fn get(&self, x: usize, y: usize) -> i8 {
+    fn get(&self, x: usize, y: usize) -> char {
         return *self.map.get(x, y).unwrap();
     }
 
-    pub fn get_field(&self, coordinates: Position) -> i8 {
+    pub fn get_field(&self, coordinates: Position) -> char {
         return self.get(coordinates.0, coordinates.1);
     }
 
     pub fn empty(&self, x: usize, y:usize) -> bool {
-        return self.get(x, y) == 0;
+        return self.get(x, y) == FIELDS[0];
+    }
+
+    fn set_empty(&mut self, coordinates: Position) {
+        self.map.set(coordinates.0, coordinates.1, FIELDS[0]);
     }
 }
 
+/// Public class methods - controllers for the map 
 impl  Map {
+    /// Spawns a portal on the map. Returns an Error if the field is not empty.
     pub fn spawn_portal(&mut self, position: Position) -> Result<(), GameError> {
         if self.empty(position.0, position.1) {
-            self.map.set(position.0, position.1, 2);
+            self.map.set(position.0, position.1, FIELDS[2]);
             return Ok(());
         } else {
             return Err(GameError::InvalidCoordinates);
         }
     }
 
+    /// Spawns a player on the map. Returns an Error if the field is not empty.
     pub fn spawn_player(&mut self, player: &mut Player, position: Position) -> Result<(), GameError> {
         if self.empty(position.0, position.1) {
-            self.map.set(position.0, position.1, -1*player.player_code);
+            self.map.set(position.0, position.1, PLAYERCODES[player.player_code]);
             player.spawn(position);
             return Ok(());
         } else {
@@ -58,44 +74,48 @@ impl  Map {
         }
     }
 
+    /// Tries to move a player in a certain direction. 
+    /// Returns an Error if the move is invalid, there is another player in the new field (battle occurs)
+    /// or there is a portal on the new field (end of the game).
     pub fn move_player(&mut self, player: &mut Player, direction: &str) -> Result<(), GameError> {
         match change_coordinates(player.coordinates.unwrap(), direction) {
             Ok(Position(new_x, new_y)) => {
+                if new_x == self.size || new_y == self.size {
+                    return Err(GameError::Outside);
+                }
                 if !self.empty(new_x, new_y) {
-                    if self.get(new_x as usize, new_y as usize) == 2{
+                    if self.get(new_x as usize, new_y as usize) == FIELDS[2] {
                         return Err(GameError::Portal);
-                    } else if get_player(self.get(new_x as usize, new_y as usize)) > 0 {
+                    } else if PLAYERCODES.contains(&self.get(new_x as usize, new_y as usize)) {
                         return Err(GameError::AnotherPlayer);
                     } else {
                         return Err(GameError::InvalidCoordinates);
                     }
                 }
-                if new_x >= self.size || new_y >= self.size {
-                    return Err(GameError::Outside);
-                }
 
                 let coordinates: Position = player.coordinates.unwrap();
-                self.map.set(coordinates.0, coordinates.1, 0);
+                self.set_empty(coordinates);
                 player.set_move(direction);
-                self.map.set(new_x, new_y, -1*player.player_code);
+                self.map.set(new_x, new_y, PLAYERCODES[player.player_code]);
                 return Ok(());
-                },
+            },
             Err(e) => return Err(e),
         }
     }
 
+    /// Emulates killing a player.
     pub fn kill_player(&mut self, player: &mut Player) {
-        let x: usize = player.coordinates.unwrap().0;
-        let y: usize = player.coordinates.unwrap().1;
+        let coordinates: Position = player.coordinates.unwrap();
         player.coordinates = None;
-        self.map.set(x, y, 0);
+        self.set_empty(coordinates);
     }
 
+    /// Returns a string representaion of the map.
     pub fn display(&self) -> String {
         let mut result: String = String::new();
         for x in 0..self.size{
             for y in 0..self.size{
-                result.push(get_char(self.get(x, y)).unwrap());
+                result.push(self.get(x, y));
                 result.push(' ');
             }
             result.push('\n');
@@ -104,81 +124,123 @@ impl  Map {
     }
 }
 
-fn generate_map(size: usize) -> Matrix<i8> {
-    let mut map: Matrix<i8> = Matrix::new(size, size);
+fn generate_map(size: usize) -> Matrix<char> {
+    let mut map: Matrix<char> = generate_random_map(size);
+    while check_if_connected(size, map.clone()) == false {
+        map = generate_random_map(size)
+    }
+    return map;
+}
+
+/// Generates a random map.
+fn generate_random_map(size: usize) -> Matrix<char> {
+    let mut map: Matrix<char> = Matrix::new(size, size);
     for i in 0..size{
         for j in 0..size{
-            map.set(i as usize, j as usize, (rand::random::<i8>()%2).abs());
+            map.set(i as usize, j as usize, FIELDS[(rand::random::<i8>()%2).abs() as usize]);
         }
     }
     return map;
 }
 
-fn get_char(field: i8) -> Result<char, GameError> {
-    if field == 1 {
-        return Ok('#');
-    } else if field == 0 {
-        return Ok('.');
-    } else if field == 2 {
-        return Ok('0');
-    } else {
-        return match_player(field as isize); 
+/// Constructs a matrix from an integer 2D array.
+fn from_array(matrix: &[&[i8]]) -> Matrix<char> {
+    let mut map: Matrix<char> = Matrix::new(matrix.len(), matrix[0].len());
+    for (i, row) in matrix.iter().enumerate() {
+        for (j, symbol) in row.iter().enumerate() {
+            map.set(i, j, FIELDS[*symbol as usize]);
+        }
     }
-}
+    return map;
+} 
 
-fn match_player(field: isize) -> Result<char, GameError> {
-    if field > 0 {
+fn match_player(field_code: char) -> Result<usize, GameError> {
+    if FIELDS.contains(&field_code) || !PLAYERCODES.contains(&field_code){
         return Err(GameError::InvalidField);
     }
-    let player_code: usize = (-1*field) as usize;
-    if player_code < 1 || player_code > MAX_PLAYERS as usize {
-        return Err(GameError::InvalidField);
-    } else {
-        return Ok(PLAYERCODES[player_code]);
-    }
+    return Ok(field_code.to_string().parse::<usize>().unwrap());
 }
 
-pub fn get_player(field: i8) -> usize {
-    match match_player(field as isize) {
-        Ok(_) => return (-1*field) as usize,
+pub fn get_player(field: char) -> usize {
+    match match_player(field) {
+        Ok(player_code) => return player_code,
         Err(_) => return 0,
     }
 }
 
+fn check_if_connected(size: usize, matrix: Matrix<char>) -> bool {
+    let mut parts = 0;
+    let mut map: Matrix<char> = matrix;
+    for i in 0..size {
+        for j in 0..size {
+            if *map.get(i, j).unwrap() == FIELDS[0] {
+                traverse(size, &mut map, i, j);
+                parts += 1;
+            }
+        }
+    }
 
-//---------------------------------------------------------------------------------------------------
+    return parts == 1;
+}
+
+fn traverse (size: usize, map: &mut Matrix<char>, start_x: usize, start_y: usize) {
+    let mut queue: Vec<(usize, usize)> = vec![(start_x, start_y)];
+    while !queue.is_empty() {
+        let (x, y) = queue.remove(0);
+        map.set(x, y, FIELDS[1]);
+        if x > 0 && *map.get(x-1, y).unwrap() == FIELDS[0] {
+            queue.push((x-1, y));
+        }
+        if x < size-1 && *map.get(x+1, y).unwrap() == FIELDS[0] {
+            queue.push((x+1, y));
+        }
+        if y > 0 && *map.get(x, y-1).unwrap() == FIELDS[0] {
+            queue.push((x, y-1));
+        }
+        if y < size-1 && *map.get(x, y+1).unwrap() == FIELDS[0] {
+            queue.push((x, y+1));
+        }
+    }
+}
+
+
+
+// ----------------------------------------------------------------------------------
 // Private functions test
 
 #[test]
+fn test_from_array() {
+    let matrix_array: &[&[i8]] = &[&[0, 1, 1, 0], &[0, 0, 1, 0], &[1, 0, 0, 0], &[1, 1, 0, 0 ]];
+    let expected = [['.', '#', '#', '.'], ['.', '.', '#', '.'], ['#', '.', '.', '.'], ['#', '#', '.', '.']];
+    let map: Matrix<char> = from_array(matrix_array);
+    for i in 0..expected.len() {
+        for (j, symbol) in expected[i].iter().enumerate() {
+            assert_eq!(symbol, map.get(i, j).unwrap());
+        }
+    }
+}
+
+#[test]
 fn test_match_player() {
-    assert_eq!(match_player(-1), Ok('1'));
-    assert_eq!(match_player(-2), Ok('2'));
-    assert_eq!(match_player(-3), Ok('3'));
-    assert_eq!(match_player(-4), Ok('4'));
+    assert_eq!(match_player('1'), Ok(1));
+    assert_eq!(match_player('2'), Ok(2));
+    assert_eq!(match_player('3'), Ok(3));
+    assert_eq!(match_player('4'), Ok(4));
 }
 
 #[test]
 fn test_match_bad_player() {
-    assert_eq!(match_player(0), Err(GameError::InvalidField));
-    assert_eq!(match_player(-5), Err(GameError::InvalidField));
-    assert_eq!(match_player(1), Err(GameError::InvalidField));
+    assert_eq!(match_player('.'), Err(GameError::InvalidField));
+    assert_eq!(match_player('#'), Err(GameError::InvalidField));
+    assert_eq!(match_player('0'), Err(GameError::InvalidField));
+    assert_eq!(match_player('5'), Err(GameError::InvalidField));
 }
 
-#[test]
-fn test_get_char() {
-    assert_eq!(get_char(0), Ok('.'));
-    assert_eq!(get_char(1), Ok('#'));
-    assert_eq!(get_char(-1), Ok('1'));
-    assert_eq!(get_char(-2), Ok('2'));
-    assert_eq!(get_char(-3), Ok('3'));
-    assert_eq!(get_char(-4), Ok('4'));
-    assert_eq!(get_char(-5), Err(GameError::InvalidField));
-}
 
 #[test]
 fn test_get_player() {
-    assert_eq!(get_player(0), 0);
-    assert_eq!(get_player(1), 0);
-    assert_eq!(get_player(-1), 1);
-    assert_eq!(get_player(-2), 2);
+    assert_eq!(get_player('0'), 0);
+    assert_eq!(get_player('7'), 0);
+    assert_eq!(get_player('1'), 1);
+    assert_eq!(get_player('2'), 2);
 }
