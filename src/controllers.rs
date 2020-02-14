@@ -10,8 +10,6 @@ impl Game {
         clear();
         let (players, number_of_players, map_size) = ask_info();
         return Game::new(players, number_of_players, map_size);
-        print!("Debug\n");
-
     }
 
     pub fn start(&mut self) {
