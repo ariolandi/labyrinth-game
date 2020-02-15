@@ -54,9 +54,8 @@ pub fn menu() {
 
 
 pub fn clear(){
-    use std::process::Command;
-    let output = Command::new("clear").output().unwrap();
-    print!("{}", String::from_utf8_lossy(&output.stdout));
+    use termion::{clear, cursor};
+    print!("{}{}", clear::All, cursor::Goto(1, 1));
 }
 
 pub fn read_str() -> String {
@@ -142,7 +141,7 @@ pub fn ask_info() -> (Vec<String>, usize, usize) {
 
 fn dice_animation() {
     clear();
-    let animation: [&str; 4] = ["\\", "|", "/", "--"];
+    let animation: [&str; 4] = ["\\", "|", "/", "—"];
     for i in 0..4 {
         print!("{}", animation[i]);
         flush();
@@ -155,7 +154,7 @@ pub fn roll_a_dice() -> usize {
     for _ in 0..3 {
         dice_animation();
     }
-    return 2 + rand::random::<usize>()%5;
+    return 1 + rand::random::<usize>()%6;
 }
 
 pub fn print_color(string: String, player_code: usize) {
